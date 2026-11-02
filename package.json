@@ -13,6 +13,7 @@
   "type": "module",
   "devDependencies": {
     "d3-celestial": "^0.7.35",
+    "playwright-core": "1.56",
     "typescript": "^7.0.2",
     "vite": "^6.4.5",
     "vitest": "^5.1.0"

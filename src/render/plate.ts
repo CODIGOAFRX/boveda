@@ -30,6 +30,12 @@ export interface PlateOptions {
   background: boolean;
   /** Escala de letra y trazo; la exportación la sube. */
   scale: number;
+  /**
+   * Capas para carteles animados: 'frame' es solo el aro graduado y 'sky' solo el cielo,
+   * dibujado hasta `reach` radios del horizonte para poder girarlo sin que aparezcan huecos.
+   */
+  layers?: 'all' | 'frame' | 'sky';
+  reach?: number;
 }
 
 const FELL = '"IM Fell English", "EB Garamond", Georgia, serif';
@@ -71,6 +77,10 @@ export function drawPlate(ctx: CanvasRenderingContext2D, o: PlateOptions): Hit[]
   const P = (alt: number, az: number) => project(alt, az, cx, cy, R);
   const hits: Hit[] = [];
   const ease = (a: number, b: number) => Math.max(0, Math.min(1, (progress - a) / (b - a)));
+  const layers = o.layers ?? 'all';
+  const reach = o.reach ?? 1;
+  // Con el cielo extendido también se dibuja lo que está bajo el horizonte.
+  const minAlt = reach > 1 ? -75 : -2;
 
   ctx.save();
   ctx.clearRect(0, 0, size, size);
@@ -81,12 +91,16 @@ export function drawPlate(ctx: CanvasRenderingContext2D, o: PlateOptions): Hit[]
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  drawFrame(ctx, cx, cy, R, band, ink, k, ease(0, 0.35));
+  if (layers !== 'sky') drawFrame(ctx, cx, cy, R, band, ink, k, ease(0, 0.35));
+  if (layers === 'frame') {
+    ctx.restore();
+    return hits;
+  }
 
   // Lavado de la noche: el disco se oscurece a medida que el Sol baja de 0° a −18°.
   ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.arc(cx, cy, R * reach, 0, Math.PI * 2);
   ctx.clip();
   ctx.globalAlpha = sunDarkness(scene.sun.alt) * ink.night;
   ctx.fillStyle = ink.ink;
@@ -161,7 +175,7 @@ export function drawPlate(ctx: CanvasRenderingContext2D, o: PlateOptions): Hit[]
   const shown = Math.floor(points.nStars * ease(0.25, 0.95));
   for (let i = shown - 1; i >= 0; i--) {
     const alt = scene.alt[i];
-    if (alt < -2) continue;
+    if (alt < minAlt) continue;
     const mag = catalog.stars[i][2];
     const [x, y] = P(alt, scene.az[i]);
     const r = Math.max(0.5, (6.3 - mag) * 0.58) * k * (size / (900 * k)) ** 0.5;
@@ -172,19 +186,19 @@ export function drawPlate(ctx: CanvasRenderingContext2D, o: PlateOptions): Hit[]
 
   // Planetas, Luna y Sol.
   for (const p of scene.planets) {
-    if (p.alt < -2) continue;
+    if (p.alt < minAlt) continue;
     const [x, y] = P(p.alt, p.az);
     planet(ctx, x, y, p, ink, k);
     hits.push({ x, y, r: 12 * k, target: { kind: 'body', id: p.id } });
   }
-  if (scene.moon.alt > -3) {
+  if (scene.moon.alt > minAlt - 1) {
     const [x, y] = P(scene.moon.alt, scene.moon.az);
     const toward = fromUnit(scene.moon.limb);
     const [lx, ly] = P(toward.alt, toward.az);
     moon(ctx, x, y, 9 * k, scene.moon.phase.illuminated, Math.atan2(ly - y, lx - x), ink, k);
     hits.push({ x, y, r: 14 * k, target: { kind: 'body', id: 'luna' } });
   }
-  if (scene.sun.alt > -3) {
+  if (scene.sun.alt > minAlt - 1 && reach === 1) {
     const [x, y] = P(scene.sun.alt, scene.sun.az);
     sun(ctx, x, y, 8 * k, ink, k);
     hits.push({ x, y, r: 16 * k, target: { kind: 'body', id: 'sol' } });
@@ -204,7 +218,7 @@ export function drawPlate(ctx: CanvasRenderingContext2D, o: PlateOptions): Hit[]
     const w = ctx.measureText(text).width;
     const h = parseFloat(font) * 1.1;
     const lx = center ? x - w / 2 : x + dx;
-    if (Math.hypot(lx + w / 2 - cx, y - cy) > R - 4 * k || !free(lx, y - h / 2, w, h)) return null;
+    if (Math.hypot(lx + w / 2 - cx, y - cy) > R * reach - 4 * k || !free(lx, y - h / 2, w, h)) return null;
     // Un filete de papel alrededor de la letra la separa de las tramas y las líneas.
     ctx.strokeStyle = ink.paper;
     ctx.lineWidth = 3 * k;
@@ -216,21 +230,21 @@ export function drawPlate(ctx: CanvasRenderingContext2D, o: PlateOptions): Hit[]
 
   // Primero lo que importa: el objeto seleccionado, Luna y planetas, después estrellas y constelaciones.
   for (const p of [scene.moon, ...scene.planets]) {
-    if (p.alt < 1) continue;
+    if (p.alt < minAlt + 3) continue;
     const [x, y] = P(p.alt, p.az);
     const on = selected?.kind === 'body' && selected.id === p.id;
     label(p.name, x, y, `italic ${12.5 * f}px ${FELL}`, on ? ink.accent : ink.ink, 12 * k);
   }
   for (let i = 0; i < Math.min(shown, 120); i++) {
     const named = catalog.names[catalog.stars[i][4]];
-    if (!named?.[0] || scene.alt[i] < 2 || catalog.stars[i][2] > (compact ? 1.2 : 1.9)) continue;
+    if (!named?.[0] || scene.alt[i] < minAlt + 4 || catalog.stars[i][2] > (compact ? 1.2 : 1.9)) continue;
     const [x, y] = P(scene.alt[i], scene.az[i]);
     const on = selected?.kind === 'star' && selected.index === i;
     label(named[0], x, y, `italic ${11.5 * f}px ${FELL}`, on ? ink.accent : ink.ink, 7 * k);
   }
   catalog.constellations.forEach((c, ci) => {
     const li = points.labels[ci];
-    if (scene.alt[li] < 4 || (compact && c.rank > 1)) return;
+    if (scene.alt[li] < minAlt + 6 || (compact && c.rank > 1)) return;
     const [x, y] = P(scene.alt[li], scene.az[li]);
     const on = ci === selCon || c.id === selStarCon;
     const sz = (c.rank === 1 ? 12 : c.rank === 2 ? 10.5 : 9.5) * f;
