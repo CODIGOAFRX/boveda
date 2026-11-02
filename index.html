@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es" data-theme="papel">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bóveda · El cielo de cualquier noche, grabado</title>
+    <meta name="description" content="El cielo real de cualquier lugar y noche entre 1800 y 2050, calculado estrella a estrella en el navegador y dibujado como un atlas celeste de 1690." />
+    <meta name="theme-color" content="#ece6d8" />
+    <meta property="og:title" content="Bóveda · El cielo de cualquier noche, grabado" />
+    <meta property="og:description" content="Elige un lugar y una fecha —la noche en que naciste, por ejemplo— y Bóveda graba ese cielo como una lámina antigua." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      try {
+        const t = localStorage.getItem('boveda:tinta');
+        if (t) document.documentElement.dataset.theme = t;
+        else if (matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'cianotipia';
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#mirar">Saltar a la lista de lo que hay en el cielo</a>
+    <header class="masthead">
+      <a class="back" href="https://www.pedrogomez.dev/">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4 6 10l6 6" /></svg>
+        Pedro Gómez
+      </a>
+      <span class="wordmark">Bóveda</span>
+      <nav aria-label="Secciones">
+        <a href="#cielo">El cielo</a>
+        <a href="#calculo">Cómo se calcula</a>
+        <a href="#creditos">Fuentes</a>
+      </nav>
+      <fieldset class="tintas">
+        <legend class="sr-only">Tinta</legend>
+        <label title="Tinta negra sobre papel"><input type="radio" name="tinta" value="papel" /><span>Papel</span></label>
+        <label title="Blanco sobre azul de Prusia"><input type="radio" name="tinta" value="cianotipia" /><span>Cianotipia</span></label>
+        <label title="Rojo sobre negro: no deslumbra a ojos ya acostumbrados a la oscuridad"><input type="radio" name="tinta" value="noche" /><span>Noche</span></label>
+      </fieldset>
+    </header>
+
+    <main>
+      <section id="cielo" class="observatorio" aria-labelledby="titulo">
+        <div class="portada">
+          <div class="titular">
+            <h1 id="titulo">Bóveda</h1>
+            <p class="lede">El cielo de cualquier noche entre 1800 y 2050, calculado estrella a estrella y grabado como en un atlas de 1690.</p>
+          </div>
+
+          <form class="cartela" id="cartela" autocomplete="off">
+            <div class="campo campo-lugar">
+              <label for="lugar">Lugar</label>
+              <div class="fila">
+                <select id="lugar"></select>
+                <button type="button" class="icono" id="ubicar" title="Usar mi ubicación">
+                  <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="5.5" /><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" /><circle cx="10" cy="10" r="1.2" class="lleno" /></svg>
+                  <span class="sr-only">Usar mi ubicación</span>
+                </button>
+              </div>
+              <p class="nota" id="nota-lugar" aria-live="polite"></p>
+            </div>
+            <div class="campo">
+              <label for="fecha">Fecha</label>
+              <input type="date" id="fecha" min="1800-01-01" max="2050-12-31" required />
+            </div>
+            <div class="campo">
+              <label for="hora">Hora</label>
+              <input type="time" id="hora" required />
+            </div>
+            <div class="acciones">
+              <button type="button" id="ahora">Ahora</button>
+              <button type="button" id="reproducir" aria-pressed="false">
+                <svg viewBox="0 0 20 20" aria-hidden="true" class="ico-play"><path d="M6 4.5v11l9-5.5z" /></svg>
+                <svg viewBox="0 0 20 20" aria-hidden="true" class="ico-pause"><path d="M7 4.5v11M13 4.5v11" /></svg>
+                <span>Girar el cielo</span>
+              </button>
+            </div>
+            <p class="pista">Prueba con la fecha en que naciste.</p>
+          </form>
+        </div>
+
+        <figure class="lamina">
+          <div class="plancha">
+            <canvas id="plate" role="img" aria-describedby="plate-desc" tabindex="0"></canvas>
+            <p id="plate-desc" class="sr-only"></p>
+          </div>
+          <figcaption>
+            <span class="pie" id="pie"></span>
+            <span class="pie-acciones">
+              <a href="#ficha" id="ir-ficha" class="enlace ir-ficha" hidden>Ver la ficha</a>
+              <button type="button" id="enlace" class="enlace">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8.5 11.5a3.5 3.5 0 0 0 5 0l2.5-2.5a3.5 3.5 0 0 0-5-5L10 5M11.5 8.5a3.5 3.5 0 0 0-5 0L4 11a3.5 3.5 0 0 0 5 5l1-1" /></svg>
+                <span>Copiar enlace</span>
+              </button>
+              <button type="button" id="grabar" class="enlace">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12" /></svg>
+                <span>Grabar lámina</span>
+              </button>
+            </span>
+          </figcaption>
+          <div class="regla">
+            <canvas id="timeline" role="slider" tabindex="0" aria-label="Hora" aria-valuemin="0" aria-valuemax="1440"></canvas>
+          </div>
+          <p class="uso">Arrastra el cielo para mover las horas. Pulsa una estrella, un planeta o el nombre de una constelación.</p>
+        </figure>
+
+        <aside class="margen" aria-live="polite">
+          <section class="ficha" id="ficha" hidden aria-labelledby="ficha-nombre"></section>
+          <section id="mirar" class="mirar" aria-labelledby="mirar-titulo">
+            <h2 id="mirar-titulo">Ahora, sobre el horizonte</h2>
+            <p class="estado" id="estado"></p>
+            <ol id="lista"></ol>
+          </section>
+        </aside>
+      </section>
+
+      <section id="calculo" class="calculo" aria-labelledby="calculo-titulo">
+        <div class="calculo-intro">
+          <h2 id="calculo-titulo">Cómo se calcula un cielo</h2>
+          <p>Nada viene precalculado. Cada vez que mueves la hora, el navegador repite estos seis pasos para las 5.044 estrellas visibles a simple vista, los siete planetas, el Sol y la Luna. Aquí los ves con los números de <strong id="calculo-objeto">Sirio</strong>.</p>
+          <p class="nota">Sin librerías de astronomía: las fórmulas son las de Jean Meeus, <cite>Astronomical Algorithms</cite> (1998), y cada una está comprobada contra sus ejemplos resueltos.</p>
+        </div>
+        <ol class="pasos" id="pasos"></ol>
+        <dl class="ficha-tecnica">
+          <div><dt>Pruebas</dt><dd>23 pruebas automáticas: los ejemplos resueltos de Meeus, horarios reales de orto y ocaso y cambios de hora</dd></div>
+          <div><dt>Catálogo</dt><dd>Hipparcos hasta magnitud 6, 88 constelaciones y la Vía Láctea en cinco niveles de brillo</dd></div>
+          <div><dt>Stack</dt><dd>TypeScript sin frameworks · Canvas 2D · Vite · Vitest · Cloudflare Workers</dd></div>
+          <div><dt>Red</dt><dd>Una sola descarga de catálogo; después, todo ocurre en tu dispositivo</dd></div>
+        </dl>
+      </section>
+
+      <section id="creditos" class="creditos" aria-labelledby="creditos-titulo">
+        <h2 id="creditos-titulo">Fuentes</h2>
+        <p>Estrellas, figuras y Vía Láctea: catálogos de <a href="https://github.com/ofrohn/d3-celestial">d3-celestial</a> de Olaf Frohn (BSD-3), a partir de Hipparcos y del atlas de constelaciones de la IAU. Órbitas planetarias: elementos aproximados de E. M. Standish, JPL. Luna: términos principales de la teoría ELP-2000/82. Letra: IM Fell, digitalizada por Igino Marini a partir de los tipos que el obispo John Fell donó a Oxford en 1686, y EB Garamond.</p>
+        <p>La lámina imita la manera de los atlas de Johannes Bayer (<cite>Uranometria</cite>, 1603) y Johannes Hevelius (<cite>Firmamentum Sobiescianum</cite>, 1690): nada de ella es una imagen; todo se traza al momento.</p>
+      </section>
+    </main>
+
+    <footer class="colofon">
+      <p>Bóveda · calculada y grabada por <a href="https://www.pedrogomez.dev/">Pedro Gómez</a>, Granada.</p>
+    </footer>
+    <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

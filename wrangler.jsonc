@@ -1,0 +1,18 @@
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "boveda",
+  "compatibility_date": "2026-11-02",
+  "workers_dev": true,
+  // Solo archivos estáticos: todo el cálculo astronómico ocurre en el navegador.
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "routes": [
+    { "pattern": "pedrogomez.dev/proyecto/boveda", "zone_name": "pedrogomez.dev" },
+    { "pattern": "pedrogomez.dev/proyecto/boveda/*", "zone_name": "pedrogomez.dev" },
+    { "pattern": "www.pedrogomez.dev/proyecto/boveda", "zone_name": "pedrogomez.dev" },
+    { "pattern": "www.pedrogomez.dev/proyecto/boveda/*", "zone_name": "pedrogomez.dev" }
+  ]
+}
