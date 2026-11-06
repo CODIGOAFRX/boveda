@@ -4,6 +4,9 @@ import {
   type Equatorial, centuries, cos, eclipticToEquatorial, norm360, obliquity, precess, sin, atan2, asin, RAD,
 } from './core';
 
+/** Años entre los que valen los elementos orbitales de Standish: fuera de ellos, Bóveda no calcula. */
+export const VALID_YEARS = [1800, 2050] as const;
+
 export interface SunPosition extends Equatorial { lon: number; distance: number }
 
 /** Posición aparente del Sol. Meeus cap. 25, método de baja precisión (±0,01°). */
@@ -78,6 +81,9 @@ export function moonPosition(jd: number): MoonPosition {
   const eps = obliquity(T) + 0.00256 * cos(omega);
   return { ...eclipticToEquatorial(lon + nutLon, lat, eps), lon, lat, distance };
 }
+
+/** Paralaje: desde la superficie vemos la Luna hasta un grado más baja que desde el centro de la Tierra. */
+export const moonParallax = (alt: number, distanceKm: number) => Math.asin(6378.14 / distanceKm) * RAD * cos(alt);
 
 export interface MoonPhase {
   /** Fracción iluminada, de 0 a 1. */

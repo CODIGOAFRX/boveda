@@ -1,6 +1,6 @@
 // El grabado. Todo se dibuja con tinta sobre papel: trazos, tramas y letra de imprenta.
 import { project } from './projection';
-import { fromUnit, sunDarkness, type Body, type Catalog, type Points, type Scene } from '../sky/scene';
+import { fromUnit, sameTarget, sunDarkness, type Body, type Catalog, type Points, type Scene, type Target } from '../sky/scene';
 
 export interface Ink {
   paper: string;
@@ -9,11 +9,6 @@ export interface Ink {
   /** Opacidad máxima del lavado nocturno sobre el disco. */
   night: number;
 }
-
-export type Target =
-  | { kind: 'star'; index: number }
-  | { kind: 'body'; id: string }
-  | { kind: 'con'; index: number };
 
 export interface Hit { x: number; y: number; r: number; target: Target }
 
@@ -36,6 +31,12 @@ export interface PlateOptions {
    */
   layers?: 'all' | 'frame' | 'sky';
   reach?: number;
+}
+
+/** Medidas de la lámina: el aro graduado ocupa la banda exterior y el cielo cabe en el círculo de radio R. */
+export function plateGeometry(size: number, scale: number) {
+  const band = size * 0.075;
+  return { cx: size / 2, cy: size / 2, band, R: size / 2 - band - 6 * scale };
 }
 
 const FELL = '"IM Fell English", "EB Garamond", Georgia, serif';
@@ -70,10 +71,7 @@ export function drawPlate(ctx: CanvasRenderingContext2D, o: PlateOptions): Hit[]
   const f = Math.max(k, 1);
   // En láminas pequeñas (móvil) solo se rotulan las figuras y estrellas principales.
   const compact = size / k < 520;
-  const cx = size / 2;
-  const cy = size / 2;
-  const band = size * 0.075;
-  const R = size / 2 - band - 6 * k;
+  const { cx, cy, band, R } = plateGeometry(size, k);
   const P = (alt: number, az: number) => project(alt, az, cx, cy, R);
   const hits: Hit[] = [];
   const ease = (a: number, b: number) => Math.max(0, Math.min(1, (progress - a) / (b - a)));
@@ -273,10 +271,6 @@ export function drawPlate(ctx: CanvasRenderingContext2D, o: PlateOptions): Hit[]
   ctx.restore();
   return hits;
 }
-
-export const sameTarget = (a: Target | null, b: Target | null) =>
-  !!a && !!b && a.kind === b.kind &&
-  (a.kind === 'body' ? a.id === (b as typeof a).id : a.index === (b as { index: number }).index);
 
 function polyline(ctx: CanvasRenderingContext2D, pts: [number, number][], P: (a: number, z: number) => [number, number]) {
   ctx.beginPath();

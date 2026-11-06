@@ -20,6 +20,11 @@ export const PLACES: Place[] = [
 
 export const localZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
+/** Id de un lugar que no está en la lista: la ubicación del navegador o unas coordenadas llegadas por enlace. */
+export const OWN_PLACE = 'aqui';
+export const ownPlace = (lat: number, lon: number, tz = localZone(), name = 'Tu ubicación'): Place =>
+  ({ id: OWN_PLACE, name, lat, lon, tz });
+
 const partsCache = new Map<string, Intl.DateTimeFormat>();
 function parts(ms: number, tz: string) {
   let f = partsCache.get(tz);

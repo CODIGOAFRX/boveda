@@ -5,11 +5,6 @@ export const DEG = Math.PI / 180;
 export const RAD = 180 / Math.PI;
 
 export const norm360 = (x: number) => ((x % 360) + 360) % 360;
-/** Lleva un ángulo a (-180, 180]. */
-export const norm180 = (x: number) => {
-  const y = norm360(x);
-  return y > 180 ? y - 360 : y;
-};
 export const sin = (d: number) => Math.sin(d * DEG);
 export const cos = (d: number) => Math.cos(d * DEG);
 export const asin = (x: number) => Math.asin(Math.max(-1, Math.min(1, x))) * RAD;

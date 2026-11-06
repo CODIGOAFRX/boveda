@@ -3,7 +3,10 @@ import {
   type Equatorial, DEG, RAD, centuries, julianDay, localSidereal, precess, toHorizontal, sin, cos,
   eclipticToEquatorial, obliquity,
 } from '../astro/core';
-import { moonPhase, moonPosition, planetPosition, sunPosition, PLANETS, type MoonPhase, type PlanetId } from '../astro/bodies';
+import {
+  moonParallax, moonPhase, moonPosition, planetPosition, sunPosition, PLANETS, type MoonPhase, type PlanetId,
+} from '../astro/bodies';
+import type { AltitudeAt } from '../astro/events';
 
 export type StarRow = [ra: number, dec: number, mag: number, bv: number, hip: number];
 export interface Constellation {
@@ -103,8 +106,7 @@ export function computeScene(p: Points, ms: number, lat: number, lon: number): S
 
   const m = moonPosition(jd);
   const mh = horiz(m);
-  // Paralaje: desde la superficie vemos la Luna hasta un grado más baja que desde el centro de la Tierra.
-  mh.alt -= Math.asin(6378.14 / m.distance) * RAD * cos(mh.alt);
+  mh.alt -= moonParallax(mh.alt, m.distance);
   // Hacia dónde mira el limbo iluminado: un paso sobre el círculo máximo que va de la Luna al Sol.
   const mu = unit(mh.alt, mh.az);
   const su = unit(sun.alt, sun.az);
@@ -143,6 +145,49 @@ export function fromUnit([x, y, z]: Horizontal3) {
 /** Coordenadas de la fecha de una estrella del catálogo. */
 export function starOfDate(cat: Catalog, i: number, T: number): Equatorial {
   return precess({ ra: cat.stars[i][0], dec: cat.stars[i][1] }, T);
+}
+
+/** Lo que se puede elegir en la lámina: una estrella o una constelación del catálogo, o un cuerpo por su id. */
+export type Target =
+  | { kind: 'star'; index: number }
+  | { kind: 'body'; id: string }
+  | { kind: 'con'; index: number };
+
+export const sameTarget = (a: Target | null, b: Target | null) =>
+  !!a && !!b && a.kind === b.kind &&
+  (a.kind === 'body' ? a.id === (b as typeof a).id : a.index === (b as { index: number }).index);
+
+/** El cielo calculado junto con el catálogo del que sale. */
+export interface Sky { catalog: Catalog; points: Points; scene: Scene }
+
+/** Los cuerpos del sistema solar, por el id con el que se eligen y se comparten en la URL. */
+export const BODY_IDS: readonly string[] = ['sol', 'luna', ...PLANETS.map((p) => p.id)];
+
+export const bodyIn = (scene: Scene, id: string): Body =>
+  id === 'sol' ? scene.sun : id === 'luna' ? scene.moon : scene.planets.find((p) => p.id === id)!;
+
+/** Altura de algo elegido a lo largo del tiempo, para buscar cuándo sale, culmina y se pone. */
+export function altitudeOf(t: Target, sky: Sky): AltitudeAt {
+  const { catalog, scene: { lat, lon, T } } = sky;
+  const at = (ms: number, eq: Equatorial) => toHorizontal(eq, lat, localSidereal(julianDay(ms), lon)).alt;
+  if (t.kind === 'star') {
+    const eq = starOfDate(catalog, t.index, T);
+    return (ms) => at(ms, eq);
+  }
+  if (t.kind === 'con') {
+    const [ra, dec] = catalog.constellations[t.index].at;
+    const eq = precess({ ra, dec }, T);
+    return (ms) => at(ms, eq);
+  }
+  if (t.id === 'sol') return (ms) => at(ms, sunPosition(julianDay(ms)));
+  if (t.id === 'luna') {
+    return (ms) => {
+      const m = moonPosition(julianDay(ms));
+      const a = at(ms, m);
+      return a - moonParallax(a, m.distance);
+    };
+  }
+  return (ms) => at(ms, planetPosition(t.id as PlanetId, julianDay(ms)));
 }
 
 export const sunDarkness = (sunAlt: number) => Math.max(0, Math.min(1, -sunAlt / 18));

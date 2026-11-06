@@ -22,7 +22,8 @@ await page.waitForFunction(() => document.fonts.status === 'loaded');
 
 const result = await page.evaluate(async ({ NIGHT, LAT, LON, SIZE, SCALE, REACH, INK }) => {
   const sc = await import('/src/sky/scene.ts');
-  const { drawPlate } = await import('/src/render/plate.ts');
+  const { drawPlate, plateGeometry } = await import('/src/render/plate.ts');
+  const { project } = await import('/src/render/projection.ts');
   await document.fonts.load('16px "IM Fell English SC"');
   await document.fonts.load('italic 16px "IM Fell English"');
   const catalog = await fetch('/data/sky.json').then((r) => r.json());
@@ -34,7 +35,7 @@ const result = await page.evaluate(async ({ NIGHT, LAT, LON, SIZE, SCALE, REACH,
   frame.width = frame.height = SIZE;
   drawPlate(frame.getContext('2d'), { ...base, layers: 'frame' });
 
-  const R = SIZE / 2 - SIZE * 0.075 - 6 * SCALE;
+  const { R } = plateGeometry(SIZE, SCALE);
   const S2 = Math.ceil(2 * R * REACH + 16);
   const sky = document.createElement('canvas');
   sky.width = sky.height = S2;
@@ -43,7 +44,7 @@ const result = await page.evaluate(async ({ NIGHT, LAT, LON, SIZE, SCALE, REACH,
   drawPlate(ctx, { ...base, layers: 'sky', reach: REACH });
 
   // Dónde cae el polo celeste dentro de la imagen del cielo, para el transform-origin del giro.
-  const poleUp = R * Math.tan(((90 - LAT) * Math.PI) / 360);
+  const poleUp = -project(LAT, 0, 0, 0, R)[1];
   return {
     frame: frame.toDataURL('image/webp', 0.9),
     sky: sky.toDataURL('image/webp', 0.86),
